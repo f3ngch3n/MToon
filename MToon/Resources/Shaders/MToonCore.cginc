@@ -51,7 +51,7 @@ struct v2f
     float isOutline : TEXCOORD5;
     fixed4 color : TEXCOORD6;
     UNITY_FOG_COORDS(7)
-    UNITY_SHADOW_COORDS(8)
+    SHADOW_COORDS(8)
     //UNITY_VERTEX_INPUT_INSTANCE_ID // necessary only if any instanced properties are going to be accessed in the fragment Shader.
 };
 
@@ -74,7 +74,7 @@ inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline
     o.tspace2 = half3(worldTangent.z, worldBitangent.z, worldNormal.z);
     o.isOutline = isOutline;
     o.color = v.color;
-    UNITY_TRANSFER_SHADOW(o, o._ShadowCoord);
+    TRANSFER_SHADOW(o);
     UNITY_TRANSFER_FOG(o, o.pos);
     return o;
 }
@@ -144,9 +144,6 @@ float4 frag_forward(v2f i) : SV_TARGET
 #endif
 #ifdef _ALPHABLEND_ON
     alpha = _Color.a * mainTex.a;
-#if !_ALPHATEST_ON && SHADER_API_D3D11 // Only enable this on D3D11, where I tested it
-    clip(alpha - 0.0001);              // Slightly improves rendering with layered transparency
-#endif
 #endif
     
     // normal
@@ -165,8 +162,10 @@ float4 frag_forward(v2f i) : SV_TARGET
     worldNormal = normalize(worldNormal);
 
     // Unity lighting
-    UNITY_LIGHT_ATTENUATION(shadowAttenuation, i, i.posWorld.xyz);
-    half3 lightDir = lerp(_WorldSpaceLightPos0.xyz, normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz), _WorldSpaceLightPos0.w);
+    //UNITY_LIGHT_ATTENUATION(shadowAttenuation, i, i.posWorld.xyz);
+	float shadowAttenuation = 1;
+    float3 worldPos = i.posWorld;
+    half3 lightDir = lerp(_WorldSpaceLightPos0.xyz, normalize(_WorldSpaceLightPos0.xyz - worldPos.xyz), _WorldSpaceLightPos0.w);
     half3 lightColor = _LightColor0.rgb * step(0.5, length(lightDir)); // length(lightDir) is zero if directional light is disabled.
     half dotNL = dot(lightDir, worldNormal);
 #ifdef MTOON_FORWARD_ADD
